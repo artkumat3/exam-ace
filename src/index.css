@@ -1,248 +1,293 @@
- @tailwind base;
- @tailwind components;
- @tailwind utilities;
- 
- /* ProCBSE Design System - Professional Education Platform */
- @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
- 
- @layer base {
-   :root {
-     /* Core Brand Colors */
-     --background: 210 20% 98%;
-     --foreground: 215 35% 15%;
- 
-     --card: 0 0% 100%;
-     --card-foreground: 215 35% 15%;
- 
-     --popover: 0 0% 100%;
-     --popover-foreground: 215 35% 15%;
- 
-     /* Navy Blue - Trust & Professionalism */
-     --primary: 215 65% 22%;
-     --primary-foreground: 45 100% 96%;
- 
-     /* Light Blue Secondary */
-     --secondary: 210 35% 94%;
-     --secondary-foreground: 215 65% 22%;
- 
-     /* Muted grays */
-     --muted: 210 20% 94%;
-     --muted-foreground: 215 15% 45%;
- 
-     /* Gold Accent - Premium feel */
-     --accent: 43 74% 49%;
-     --accent-foreground: 215 35% 15%;
- 
-     /* Success Green */
-     --success: 142 72% 40%;
-     --success-foreground: 0 0% 100%;
- 
-     --destructive: 0 84% 60%;
-     --destructive-foreground: 0 0% 100%;
- 
-     --border: 214 25% 88%;
-     --input: 214 25% 88%;
-     --ring: 215 65% 22%;
- 
-     --radius: 0.75rem;
- 
-     /* Custom gradients */
-     --gradient-hero: linear-gradient(135deg, hsl(215 65% 22%) 0%, hsl(215 55% 35%) 50%, hsl(210 45% 45%) 100%);
-     --gradient-gold: linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(38 70% 55%) 100%);
-     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
-     --gradient-subtle: linear-gradient(180deg, hsl(210 35% 94%) 0%, hsl(0 0% 100%) 100%);
- 
-     /* Shadows */
-     --shadow-sm: 0 1px 2px hsl(215 35% 15% / 0.05);
-     --shadow-md: 0 4px 6px -1px hsl(215 35% 15% / 0.08), 0 2px 4px -2px hsl(215 35% 15% / 0.04);
-     --shadow-lg: 0 10px 15px -3px hsl(215 35% 15% / 0.1), 0 4px 6px -4px hsl(215 35% 15% / 0.1);
-     --shadow-xl: 0 20px 25px -5px hsl(215 35% 15% / 0.1), 0 8px 10px -6px hsl(215 35% 15% / 0.1);
-     --shadow-gold: 0 4px 14px hsl(43 74% 49% / 0.35);
-     --shadow-primary: 0 4px 14px hsl(215 65% 22% / 0.25);
- 
-     /* Sidebar */
-     --sidebar-background: 215 65% 22%;
-     --sidebar-foreground: 45 100% 96%;
-     --sidebar-primary: 43 74% 49%;
-     --sidebar-primary-foreground: 215 35% 15%;
-     --sidebar-accent: 215 55% 30%;
-     --sidebar-accent-foreground: 45 100% 96%;
-     --sidebar-border: 215 50% 28%;
-     --sidebar-ring: 43 74% 49%;
-   }
- 
-   .dark {
-     --background: 215 35% 8%;
-     --foreground: 210 20% 96%;
- 
-     --card: 215 30% 12%;
-     --card-foreground: 210 20% 96%;
- 
-     --popover: 215 30% 12%;
-     --popover-foreground: 210 20% 96%;
- 
-     --primary: 43 74% 55%;
-     --primary-foreground: 215 35% 10%;
- 
-     --secondary: 215 25% 18%;
-     --secondary-foreground: 210 20% 96%;
- 
-     --muted: 215 25% 18%;
-     --muted-foreground: 215 15% 60%;
- 
-     --accent: 43 74% 55%;
-     --accent-foreground: 215 35% 10%;
- 
-     --destructive: 0 70% 50%;
-     --destructive-foreground: 0 0% 100%;
- 
-     --border: 215 25% 20%;
-     --input: 215 25% 20%;
-     --ring: 43 74% 55%;
- 
-     --sidebar-background: 215 35% 6%;
-     --sidebar-foreground: 210 20% 96%;
-     --sidebar-primary: 43 74% 55%;
-     --sidebar-primary-foreground: 215 35% 10%;
-     --sidebar-accent: 215 25% 15%;
-     --sidebar-accent-foreground: 210 20% 96%;
-     --sidebar-border: 215 25% 15%;
-     --sidebar-ring: 43 74% 55%;
-   }
- }
- 
- @layer base {
-   * {
-     @apply border-border;
-   }
- 
-   body {
-     @apply bg-background text-foreground font-sans antialiased;
-   }
- 
-   h1, h2, h3 {
-     @apply font-display font-bold tracking-tight;
-   }
- }
- 
- @layer components {
-   /* Hero gradient background */
-   .bg-hero-gradient {
-     background: var(--gradient-hero);
-   }
- 
-   /* Gold gradient for CTAs */
-   .bg-gold-gradient {
-     background: var(--gradient-gold);
-   }
- 
-   /* Card with subtle gradient */
-   .bg-card-gradient {
-     background: var(--gradient-card);
-   }
- 
-   /* Subtle section backgrounds */
-   .bg-subtle-gradient {
-     background: var(--gradient-subtle);
-   }
- 
-   /* Shadow utilities */
-   .shadow-gold {
-     box-shadow: var(--shadow-gold);
-   }
- 
-   .shadow-primary-glow {
-     box-shadow: var(--shadow-primary);
-   }
- 
-   /* Animated underline for links */
-   .link-underline {
-     @apply relative;
-   }
- 
-   .link-underline::after {
-     content: '';
-     @apply absolute bottom-0 left-0 w-0 h-0.5 bg-accent transition-all duration-300;
-   }
- 
-   .link-underline:hover::after {
-     @apply w-full;
-   }
- 
-   /* Glass effect */
-   .glass {
-     @apply bg-background/80 backdrop-blur-md border border-border/50;
-   }
- 
-   /* Feature card hover effect */
-   .feature-card {
-     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
-   }
- 
-   /* Stat number animation */
-   .stat-number {
-     @apply font-display font-bold text-4xl md:text-5xl;
-     background: var(--gradient-gold);
-     -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent;
-     background-clip: text;
-   }
- 
-   /* Book card styling */
-   .book-card {
-     @apply relative overflow-hidden rounded-xl transition-all duration-300;
-   }
- 
-   .book-card::before {
-     content: '';
-     @apply absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 transition-opacity duration-300;
-   }
- 
-   .book-card:hover::before {
-     @apply opacity-100;
-   }
- 
-   /* Price tag styling */
-   .price-tag {
-     @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold;
-     background: var(--gradient-gold);
-     color: hsl(var(--foreground));
-   }
- 
-   /* Badge styles */
-   .badge-success {
-     @apply bg-success text-success-foreground;
-   }
- 
-   .badge-pending {
-     @apply bg-accent text-accent-foreground;
-   }
- }
- 
- @layer utilities {
-   /* Smooth scroll */
-   .scroll-smooth {
-     scroll-behavior: smooth;
-   }
- 
-   /* Text gradient */
-   .text-gradient-gold {
-     background: var(--gradient-gold);
-     -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent;
-     background-clip: text;
-   }
- 
-   .text-gradient-primary {
-     background: var(--gradient-hero);
-     -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent;
-     background-clip: text;
-   }
- 
-   /* Animation delays */
-   .animation-delay-100 { animation-delay: 100ms; }
-   .animation-delay-200 { animation-delay: 200ms; }
-   .animation-delay-300 { animation-delay: 300ms; }
-   .animation-delay-400 { animation-delay: 400ms; }
- }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ProCBSE Design System - Modern Gradient Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+
+@layer base {
+  :root {
+    /* Light Mode - Soft purple tones */
+    --background: 270 30% 98%;
+    --foreground: 270 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 270 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 270 20% 15%;
+
+    /* Purple Primary */
+    --primary: 265 84% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Light Purple Secondary */
+    --secondary: 270 20% 96%;
+    --secondary-foreground: 265 84% 50%;
+
+    /* Muted grays with purple tint */
+    --muted: 270 15% 94%;
+    --muted-foreground: 270 10% 45%;
+
+    /* Orange/Coral Accent */
+    --accent: 15 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Success Green */
+    --success: 142 72% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 20% 90%;
+    --input: 270 20% 90%;
+    --ring: 265 84% 60%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(270 40% 96%) 0%, hsl(280 50% 94%) 50%, hsl(30 60% 95%) 100%);
+    --gradient-hero-dark: linear-gradient(135deg, hsl(265 60% 12%) 0%, hsl(270 50% 8%) 50%, hsl(280 40% 5%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(15 85% 55%) 0%, hsl(35 90% 55%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(270 30% 98%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(270 20% 96%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-purple: linear-gradient(135deg, hsl(265 84% 60%) 0%, hsl(280 70% 50%) 100%);
+    --gradient-text: linear-gradient(135deg, hsl(265 84% 60%) 0%, hsl(15 85% 55%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px hsl(270 20% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(270 20% 15% / 0.08), 0 2px 4px -2px hsl(270 20% 15% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(270 20% 15% / 0.1), 0 4px 6px -4px hsl(270 20% 15% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(270 20% 15% / 0.1), 0 8px 10px -6px hsl(270 20% 15% / 0.1);
+    --shadow-gold: 0 4px 20px hsl(15 85% 55% / 0.4);
+    --shadow-primary: 0 4px 20px hsl(265 84% 60% / 0.35);
+
+    /* Sidebar */
+    --sidebar-background: 265 60% 20%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 15 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 265 50% 30%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 265 40% 28%;
+    --sidebar-ring: 15 85% 55%;
+  }
+
+  .dark {
+    --background: 265 50% 6%;
+    --foreground: 270 15% 95%;
+
+    --card: 265 40% 10%;
+    --card-foreground: 270 15% 95%;
+
+    --popover: 265 40% 10%;
+    --popover-foreground: 270 15% 95%;
+
+    --primary: 265 84% 65%;
+    --primary-foreground: 265 50% 8%;
+
+    --secondary: 265 30% 15%;
+    --secondary-foreground: 270 15% 95%;
+
+    --muted: 265 30% 15%;
+    --muted-foreground: 270 15% 60%;
+
+    --accent: 15 85% 58%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 72% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 265 30% 18%;
+    --input: 265 30% 18%;
+    --ring: 265 84% 65%;
+
+    --sidebar-background: 265 50% 5%;
+    --sidebar-foreground: 270 15% 95%;
+    --sidebar-primary: 15 85% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 265 30% 12%;
+    --sidebar-accent-foreground: 270 15% 95%;
+    --sidebar-border: 265 30% 12%;
+    --sidebar-ring: 15 85% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-display font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Hero gradient background */
+  .bg-hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .dark .bg-hero-gradient {
+    background: var(--gradient-hero-dark);
+  }
+
+  /* Gold/Orange gradient for CTAs */
+  .bg-gold-gradient {
+    background: var(--gradient-gold);
+  }
+
+  /* Purple gradient */
+  .bg-purple-gradient {
+    background: var(--gradient-purple);
+  }
+
+  /* Card with subtle gradient */
+  .bg-card-gradient {
+    background: var(--gradient-card);
+  }
+
+  /* Subtle section backgrounds */
+  .bg-subtle-gradient {
+    background: var(--gradient-subtle);
+  }
+
+  /* Shadow utilities */
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .shadow-primary-glow {
+    box-shadow: var(--shadow-primary);
+  }
+
+  /* Animated underline for links */
+  .link-underline {
+    @apply relative;
+  }
+
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 bg-accent transition-all duration-300;
+  }
+
+  .link-underline:hover::after {
+    @apply w-full;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-md border border-border/50;
+  }
+
+  .dark .glass {
+    @apply bg-background/60 backdrop-blur-md border border-border/30;
+  }
+
+  /* Feature card hover effect */
+  .feature-card {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Stat number animation */
+  .stat-number {
+    @apply font-display font-bold text-4xl md:text-5xl;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Book card styling */
+  .book-card {
+    @apply relative overflow-hidden rounded-xl transition-all duration-300;
+  }
+
+  .book-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 transition-opacity duration-300;
+  }
+
+  .book-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Price tag styling */
+  .price-tag {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold;
+    background: var(--gradient-gold);
+    color: white;
+  }
+
+  /* Badge styles */
+  .badge-success {
+    @apply bg-success text-success-foreground;
+  }
+
+  .badge-pending {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Decorative blob */
+  .blob {
+    @apply absolute rounded-full blur-3xl opacity-30;
+  }
+
+  .blob-purple {
+    background: hsl(265 84% 60% / 0.3);
+  }
+
+  .blob-orange {
+    background: hsl(15 85% 55% / 0.2);
+  }
+
+  /* Floating action buttons container */
+  .floating-actions {
+    @apply fixed right-6 bottom-6 flex flex-col gap-3 z-50;
+  }
+}
+
+@layer utilities {
+  /* Smooth scroll */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Text gradient utilities */
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-primary {
+    background: var(--gradient-purple);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animation delays */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+}

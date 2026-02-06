@@ -3,27 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>PROCBSE</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>ProCBSE - Master CBSE Board Exams</title>
+    <meta name="description" content="Master CBSE Board Exams with 99 Guaranteed Questions. Analyzed from 60+ sample papers and 10 years of board exam patterns." />
+    <meta name="author" content="ProCBSE" />
+    <meta name="keywords" content="CBSE, board exam, class 10, class 12, preparation, questions, study material" />
 
-    <!-- TODO: Update og:title to match your application name -->
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ProCBSE" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     
-    <meta property="og:description" content="Lovable Generated Project" />
+    <!-- Open Graph -->
+    <meta property="og:title" content="ProCBSE - Master CBSE Board Exams" />
+    <meta property="og:description" content="99 Guaranteed Questions for CBSE Board Exam Success" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/icons/icon-512.png" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <meta property="og:title" content="PROCBSE">
-  <meta name="twitter:title" content="PROCBSE">
-  <link rel="icon" type="image/x-icon" href="https://storage.googleapis.com/gpt-engineer-file-uploads/n7ddKm9493QYUt82oxU3H1RKPyC3/uploads/1770263929164-Untitled_design.jpg">
-</head>
+    <meta name="twitter:title" content="ProCBSE - Master CBSE Board Exams" />
+    <meta name="twitter:description" content="99 Guaranteed Questions for CBSE Board Exam Success" />
+    <meta name="twitter:image" content="/icons/icon-512.png" />
+    
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+  </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register Service Worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
