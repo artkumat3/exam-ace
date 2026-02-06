@@ -55,29 +55,30 @@
      return items.reduce((sum, item) => sum + item.price, 0);
    }, [items]);
  
-   // Dynamic pricing: 2 books = ₹99, 4 books = ₹249, addons are ₹99 each
-   const getDiscount = useCallback(() => {
-     const bookCount = getBookCount();
-     const addonCount = getAddonCount();
-     
-     const bookSubtotal = items
-       .filter(item => item.productType === 'book')
-       .reduce((sum, item) => sum + item.price, 0);
-     
-     let bookTotal = bookSubtotal;
-     
-     if (bookCount >= 4) {
-       bookTotal = 249;
-     } else if (bookCount >= 2) {
-       bookTotal = 99;
-     }
-     
-     const addonTotal = addonCount * 99;
-     const actualTotal = bookTotal + addonTotal;
-     const subtotal = getSubtotal();
-     
-     return subtotal - actualTotal;
-   }, [items, getBookCount, getAddonCount, getSubtotal]);
+  // Dynamic pricing: 2 books = ₹99, 4 books = ₹249, addons are ₹19 each
+  const getDiscount = useCallback(() => {
+    const bookCount = getBookCount();
+    const addonCount = getAddonCount();
+    
+    const bookSubtotal = items
+      .filter(item => item.productType === 'book')
+      .reduce((sum, item) => sum + item.price, 0);
+    
+    let bookTotal = bookSubtotal;
+    
+    if (bookCount >= 4) {
+      bookTotal = 249;
+    } else if (bookCount >= 2) {
+      bookTotal = 99;
+    }
+    
+    // Addons are ₹19 each
+    const addonTotal = addonCount * 19;
+    const actualTotal = bookTotal + addonTotal;
+    const subtotal = getSubtotal();
+    
+    return subtotal - actualTotal;
+  }, [items, getBookCount, getAddonCount, getSubtotal]);
  
    const getTotal = useCallback(() => {
      return getSubtotal() - getDiscount();
