@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Copy, CheckCircle, AlertCircle, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, AlertCircle, Upload, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useCart } from '@/contexts/CartContext';
@@ -11,21 +9,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 export default function Checkout() {
   const { items, getTotal, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [transactionId, setTransactionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [step, setStep] = useState<'payment' | 'otp'>('payment');
-  const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [step, setStep] = useState<'payment' | 'upload'>('payment');
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
 
   const total = getTotal();
 
@@ -39,7 +36,7 @@ export default function Checkout() {
     }
   }, [user, items, navigate]);
 
-  // Generate unique transaction ID
+  // Generate unique transaction ID (stored but not shown)
   useEffect(() => {
     const generateTxnId = () => {
       const timestamp = Date.now().toString(36).toUpperCase();
@@ -49,30 +46,14 @@ export default function Checkout() {
     setTransactionId(generateTxnId());
   }, []);
 
-  const upiLink = `upi://pay?pa=arbish@fam&am=${total}&tn=${transactionId}&cu=INR`;
   const upiWebLink = `https://www.upi.me/pay?pa=arbish@fam&am=${total}&tn=${transactionId}`;
 
-  const handleCopyTxnId = () => {
-    navigator.clipboard.writeText(transactionId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Copied!', description: 'Transaction ID copied to clipboard' });
-  };
-
-  const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
-
-  const handleProceedToVerification = async () => {
+  const handleProceedToUpload = async () => {
     if (!user) return;
     
     setIsSubmitting(true);
 
     try {
-      // Generate OTP for verification
-      const newOtp = generateOTP();
-      setGeneratedOtp(newOtp);
-
       // Create order in pending state
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -81,7 +62,7 @@ export default function Checkout() {
           transaction_id: transactionId,
           total_amount: total,
           discount_applied: items.reduce((sum, i) => sum + i.price, 0) - total,
-          status: 'pending_otp',
+          status: 'pending_verification',
         })
         .select()
         .single();
@@ -101,14 +82,7 @@ export default function Checkout() {
 
       await supabase.from('order_items').insert(orderItems);
 
-      // Show OTP to user (in production, this would be sent via SMS/Email)
-      toast({
-        title: 'Verification Code',
-        description: `Your OTP is: ${newOtp}`,
-        duration: 10000,
-      });
-
-      setStep('otp');
+      setStep('upload');
     } catch (error) {
       console.error('Checkout error:', error);
       toast({
@@ -121,20 +95,23 @@ export default function Checkout() {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    if (otp.length !== 6) {
-      toast({
-        title: 'Invalid OTP',
-        description: 'Please enter the complete 6-digit OTP',
-        variant: 'destructive',
-      });
-      return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setScreenshotFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  };
 
-    if (otp !== generatedOtp) {
+  const handleVerifyScreenshot = async () => {
+    if (!screenshotFile || !orderId || !user) {
       toast({
-        title: 'Incorrect OTP',
-        description: 'The OTP you entered is incorrect. Please try again.',
+        title: 'Please upload a screenshot',
+        description: 'Upload your payment screenshot to verify.',
         variant: 'destructive',
       });
       return;
@@ -143,14 +120,44 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     try {
-      // Update order status to verifying (admin will confirm)
+      // Upload screenshot to storage
+      const fileExt = screenshotFile.name.split('.').pop();
+      const fileName = `${orderId}-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('payment-screenshots')
+        .upload(fileName, screenshotFile);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('payment-screenshots')
+        .getPublicUrl(fileName);
+
+      // Update order with screenshot URL
       await supabase
         .from('orders')
-        .update({ status: 'verifying' })
+        .update({ 
+          screenshot_url: urlData.publicUrl,
+          status: 'verifying' 
+        })
         .eq('id', orderId);
 
-      // Add books to user's library immediately (can be reverted by admin if fraud)
-      if (user && orderId) {
+      // Call AI verification edge function
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+        body: { orderId, screenshotUrl: urlData.publicUrl }
+      });
+
+      if (verifyError) {
+        console.error('Verification error:', verifyError);
+        // Still proceed, admin can manually verify
+      }
+
+      if (verifyData?.verified) {
+        // AI verified - add books to user's library
         for (const item of items) {
           await supabase.from('user_books').upsert({
             user_id: user.id,
@@ -158,37 +165,35 @@ export default function Checkout() {
             order_id: orderId,
           });
         }
+
+        clearCart();
+
+        toast({
+          title: 'Payment Verified! ✅',
+          description: 'Your books are now available in My Books.',
+        });
+
+        navigate('/my-books');
+      } else {
+        // Pending manual verification
+        toast({
+          title: 'Screenshot Uploaded',
+          description: 'Your payment is being verified. You\'ll get access once confirmed.',
+        });
+        
+        clearCart();
+        navigate('/my-books');
       }
-
-      clearCart();
-
-      toast({
-        title: 'Payment Verified!',
-        description: 'Your books are now available in My Books.',
-      });
-
-      navigate('/my-books');
     } catch (error) {
       console.error('Verification error:', error);
       toast({
-        title: 'Something went wrong',
-        description: 'Please contact support.',
+        title: 'Upload failed',
+        description: 'Please try again or contact support.',
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleResendOTP = () => {
-    const newOtp = generateOTP();
-    setGeneratedOtp(newOtp);
-    setOtp('');
-    toast({
-      title: 'New OTP Generated',
-      description: `Your new OTP is: ${newOtp}`,
-      duration: 10000,
-    });
   };
 
   if (!user || items.length === 0) {
@@ -244,65 +249,34 @@ export default function Checkout() {
                       2. Pay via UPI
                     </h2>
 
-                    <div className="bg-secondary/50 rounded-lg p-4 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Transaction ID</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCopyTxnId}
-                          className="h-8"
-                        >
-                          {copied ? (
-                            <CheckCircle className="w-4 h-4 text-success" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <code className="text-lg font-mono font-bold text-foreground">
-                        {transactionId}
-                      </code>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        asChild
-                        className="flex-1 bg-gold-gradient text-white hover:opacity-90"
-                      >
-                        <a href={upiLink}>
-                          Pay ₹{total} via UPI App
-                        </a>
-                      </Button>
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <a href={upiWebLink} target="_blank" rel="noopener noreferrer">
-                          Open UPI Web
-                        </a>
-                      </Button>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-accent/10 rounded-lg">
+                    <div className="bg-primary/10 rounded-lg p-4 mb-4 border border-primary/20">
                       <p className="text-sm text-muted-foreground flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
                         <span>
-                          <strong>Important:</strong> Complete the UPI payment, then click the button below to verify with OTP.
+                          Click the button below to pay <strong>₹{total}</strong> via UPI. After payment, take a screenshot and upload it to verify.
                         </span>
                       </p>
                     </div>
+
+                    <Button
+                      asChild
+                      className="w-full bg-gold-gradient text-white hover:opacity-90 font-semibold shadow-gold"
+                      size="lg"
+                    >
+                      <a href={upiWebLink} target="_blank" rel="noopener noreferrer">
+                        Pay ₹{total} via UPI
+                      </a>
+                    </Button>
                   </div>
 
-                  {/* Step 3: Verify Payment */}
+                  {/* Step 3: Continue to Upload */}
                   <div className="bg-card rounded-xl border border-border p-6">
                     <h2 className="font-semibold text-lg text-foreground mb-4">
-                      3. Verify Payment
+                      3. Upload Payment Proof
                     </h2>
 
                     <Button
-                      onClick={handleProceedToVerification}
+                      onClick={handleProceedToUpload}
                       disabled={isSubmitting}
                       className="w-full bg-purple-gradient text-white hover:opacity-90 shadow-primary-glow font-semibold"
                       size="lg"
@@ -314,48 +288,72 @@ export default function Checkout() {
                         </>
                       ) : (
                         <>
-                          <Send className="w-4 h-4 mr-2" />
-                          I've Paid - Send OTP
+                          <Upload className="w-4 h-4 mr-2" />
+                          I've Paid - Upload Screenshot
                         </>
                       )}
                     </Button>
 
                     <p className="text-xs text-center text-muted-foreground mt-4">
-                      An OTP will be sent to verify your payment.
+                      After clicking, you'll upload your payment screenshot for verification.
                     </p>
                   </div>
                 </>
               ) : (
-                /* OTP Verification Step */
+                /* Screenshot Upload Step */
                 <div className="bg-card rounded-xl border border-border p-6">
                   <h2 className="font-semibold text-lg text-foreground mb-4">
-                    Enter Verification OTP
+                    Upload Payment Screenshot
                   </h2>
 
                   <p className="text-muted-foreground text-sm mb-6">
-                    We've sent a 6-digit OTP. Enter it below to complete your purchase.
+                    Upload a clear screenshot of your UPI payment confirmation showing the amount and transaction ID.
                   </p>
 
-                  <div className="flex justify-center mb-6">
-                    <InputOTP
-                      maxLength={6}
-                      value={otp}
-                      onChange={setOtp}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {screenshotPreview ? (
+                    <div className="mb-6">
+                      <div className="relative rounded-lg overflow-hidden border border-border">
+                        <img 
+                          src={screenshotPreview} 
+                          alt="Payment screenshot" 
+                          className="w-full max-h-64 object-contain bg-secondary/50"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="absolute bottom-2 right-2"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mb-6 border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
                     >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
+                      <Image className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-muted-foreground text-sm">
+                        Click to upload screenshot
+                      </p>
+                      <p className="text-muted-foreground text-xs mt-1">
+                        PNG, JPG up to 10MB
+                      </p>
+                    </div>
+                  )}
 
                   <Button
-                    onClick={handleVerifyOTP}
-                    disabled={isSubmitting || otp.length !== 6}
+                    onClick={handleVerifyScreenshot}
+                    disabled={isSubmitting || !screenshotFile}
                     className="w-full bg-gold-gradient text-white hover:opacity-90 shadow-gold font-semibold"
                     size="lg"
                   >
@@ -372,16 +370,9 @@ export default function Checkout() {
                     )}
                   </Button>
 
-                  <div className="mt-4 text-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleResendOTP}
-                      className="text-muted-foreground"
-                    >
-                      Didn't receive OTP? Resend
-                    </Button>
-                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Our AI will verify your payment. If it can't be verified automatically, admin will review it manually.
+                  </p>
                 </div>
               )}
             </div>
