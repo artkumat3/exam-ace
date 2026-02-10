@@ -47,7 +47,7 @@ export default function Checkout() {
     setTransactionId(generateTxnId());
   }, []);
 
-  const upiLink = `upi://pay?pa=arbish@fam&am=${total}&tn=${transactionId}`;
+  const upiWebLink = `https://www.upi.me/pay?pa=arbish@fam&am=${total}&tn=${transactionId}`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -291,7 +291,7 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <a href={upiLink} className="block">
+                  <a href={upiWebLink} target="_blank" rel="noopener noreferrer" className="block">
                     <Button
                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                       size="lg"
