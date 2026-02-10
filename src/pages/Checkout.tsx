@@ -47,64 +47,7 @@ export default function Checkout() {
     setTransactionId(generateTxnId());
   }, []);
 
-  const upiWebLink = `https://www.upi.me/pay?pa=arbish@fam&am=${total}&tn=${transactionId}`;
-
-  const handleOpenUPI = () => {
-    window.open(upiWebLink, '_blank');
-  };
-
-  const handleProceedToUpload = async () => {
-    if (!user) return;
-    
-    setIsSubmitting(true);
-
-    try {
-      // Create order in pending state
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          transaction_id: transactionId,
-          total_amount: total,
-          discount_applied: items.reduce((sum, i) => sum + i.price, 0) - total,
-          status: 'pending_verification',
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        console.error('Order creation error:', orderError);
-        throw orderError;
-      }
-
-      setOrderId(order.id);
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        price: item.price,
-      }));
-
-      await supabase.from('order_items').insert(orderItems);
-
-      setStep('upload');
-      
-      toast({
-        title: 'Ready for verification',
-        description: 'Please upload your payment screenshot.',
-      });
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: 'Something went wrong',
-        description: 'Please try again or contact support.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const upiLink = `upi://pay?pa=arbish@fam&am=${total}&tn=${transactionId}`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,6 +69,55 @@ export default function Checkout() {
     }
   };
 
+  const handlePayAndUpload = async () => {
+    if (!user) return;
+
+    // If we haven't created an order yet, create one and move to upload step
+    if (step === 'payment') {
+      setIsSubmitting(true);
+      try {
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user.id,
+            transaction_id: transactionId,
+            total_amount: total,
+            discount_applied: items.reduce((sum, i) => sum + i.price, 0) - total,
+            status: 'pending_verification',
+          })
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error('Order creation error:', orderError);
+          throw orderError;
+        }
+
+        setOrderId(order.id);
+
+        // Create order items
+        const orderItems = items.map(item => ({
+          order_id: order.id,
+          product_id: item.id,
+          price: item.price,
+        }));
+
+        await supabase.from('order_items').insert(orderItems);
+        setStep('upload');
+      } catch (error) {
+        console.error('Checkout error:', error);
+        toast({
+          title: 'Something went wrong',
+          description: 'Please try again or contact support.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+  };
+
   const handleVerifyScreenshot = async () => {
     if (!screenshotFile || !orderId || !user) {
       toast({
@@ -144,12 +136,12 @@ export default function Checkout() {
       // Upload screenshot to storage
       const fileExt = screenshotFile.name.split('.').pop() || 'jpg';
       const fileName = `${user.id}/${orderId}-${Date.now()}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('payment-screenshots')
         .upload(fileName, screenshotFile, {
           contentType: screenshotFile.type,
-          upsert: true
+          upsert: true,
         });
 
       if (uploadError) {
@@ -168,9 +160,9 @@ export default function Checkout() {
       // Update order with screenshot URL
       await supabase
         .from('orders')
-        .update({ 
+        .update({
           screenshot_url: screenshotUrl,
-          status: 'verifying' 
+          status: 'verifying',
         })
         .eq('id', orderId);
 
@@ -178,7 +170,7 @@ export default function Checkout() {
 
       // Call AI verification edge function
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
-        body: { orderId, screenshotUrl }
+        body: { orderId, screenshotUrl },
       });
 
       console.log('Verification response:', verifyData);
@@ -189,37 +181,30 @@ export default function Checkout() {
       }
 
       if (verifyData?.verified) {
-        // AI verified - books already granted by edge function
         clearCart();
-
         toast({
           title: 'Payment Verified! ✅',
           description: 'Your books are now available in My Books.',
         });
-
         navigate('/my-books');
       } else {
-        // Pending manual verification - still give access but mark for review
-        setVerificationMessage('');
-        
-        // Grant books anyway for now (admin can revoke if fraud)
+        // Grant books anyway for review, admin can revoke
         for (const item of items) {
-          await supabase.from('user_books').upsert({
-            user_id: user.id,
-            product_id: item.id,
-            order_id: orderId,
-          }, {
-            onConflict: 'user_id,product_id'
-          });
+          await supabase.from('user_books').upsert(
+            {
+              user_id: user.id,
+              product_id: item.id,
+              order_id: orderId,
+            },
+            { onConflict: 'user_id,product_id' }
+          );
         }
-        
-        clearCart();
 
+        clearCart();
         toast({
           title: 'Order Submitted',
           description: verifyData?.message || 'Your payment is being reviewed. Books have been added to your library.',
         });
-        
         navigate('/my-books');
       }
     } catch (error) {
@@ -267,100 +252,96 @@ export default function Checkout() {
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                     1
                   </div>
-                  <h2 className="font-semibold text-lg text-foreground">
-                    Order Summary
-                  </h2>
+                  <h2 className="font-semibold text-lg text-foreground">Order Summary</h2>
                 </div>
                 <div className="space-y-2 ml-11">
-                  {items.map(item => (
+                  {items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{item.name}</span>
-                      <span className="font-medium">₹{item.productType === 'addon' ? 19 : item.price}</span>
+                      <span className="font-medium">₹{item.price}</span>
                     </div>
                   ))}
                   <Separator className="my-3" />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-gradient">₹{total}</span>
+                    <span className="text-primary">₹{total}</span>
                   </div>
                 </div>
               </div>
 
+              {/* Step 2: Pay via UPI */}
+              <div className="bg-card rounded-xl border border-border p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step !== 'payment' ? 'bg-accent/20 text-accent' : 'bg-primary/10 text-primary'}`}>
+                    {step !== 'payment' ? <CheckCircle className="w-4 h-4" /> : '2'}
+                  </div>
+                  <h2 className="font-semibold text-lg text-foreground">Pay via UPI</h2>
+                </div>
+
+                <div className="ml-11">
+                  <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/10">
+                    <p className="text-sm text-muted-foreground flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
+                      <span>
+                        Click the button below to pay{' '}
+                        <strong className="text-foreground">₹{total}</strong> via UPI app. After
+                        payment, take a <strong className="text-foreground">clear screenshot</strong>{' '}
+                        of the success screen.
+                      </span>
+                    </p>
+                  </div>
+
+                  <a href={upiLink} className="block">
+                    <Button
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                      size="lg"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Pay ₹{total} via UPI App
+                    </Button>
+                  </a>
+                </div>
+              </div>
+
+              {/* Step 3: Upload Screenshot */}
               {step === 'payment' && (
-                <>
-                  {/* Step 2: Pay via UPI */}
-                  <div className="bg-card rounded-xl border border-border p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        2
-                      </div>
-                      <h2 className="font-semibold text-lg text-foreground">
-                        Pay via UPI
-                      </h2>
+                <div className="bg-card rounded-xl border border-border p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                      3
                     </div>
-
-                    <div className="ml-11">
-                      <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/10">
-                        <p className="text-sm text-muted-foreground flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
-                          <span>
-                            Click the button below to pay <strong className="text-foreground">₹{total}</strong> via UPI. After payment, take a <strong className="text-foreground">clear screenshot</strong> showing the success message and amount.
-                          </span>
-                        </p>
-                      </div>
-
-                      <Button
-                        onClick={handleOpenUPI}
-                        className="w-full bg-gold-gradient text-white hover:opacity-90 font-semibold shadow-gold"
-                        size="lg"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Pay ₹{total} via UPI
-                      </Button>
-                    </div>
+                    <h2 className="font-semibold text-lg text-foreground">
+                      Upload Payment Proof
+                    </h2>
                   </div>
 
-                  {/* Step 3: Upload Screenshot */}
-                  <div className="bg-card rounded-xl border border-border p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        3
-                      </div>
-                      <h2 className="font-semibold text-lg text-foreground">
-                        Upload Payment Screenshot
-                      </h2>
-                    </div>
-
-                    <div className="ml-11">
-                      <Button
-                        onClick={handleProceedToUpload}
-                        disabled={isSubmitting}
-                        className="w-full bg-purple-gradient text-white hover:opacity-90 shadow-primary-glow font-semibold"
-                        size="lg"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-2" />
-                            I've Paid - Upload Screenshot
-                          </>
-                        )}
-                      </Button>
-
-                      <p className="text-xs text-center text-muted-foreground mt-4">
-                        Our AI will verify your payment automatically.
-                      </p>
-                    </div>
+                  <div className="ml-11">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      After completing payment, click below to proceed to the screenshot upload step.
+                    </p>
+                    <Button
+                      onClick={handlePayAndUpload}
+                      disabled={isSubmitting}
+                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                      size="lg"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          I've Paid – Upload Screenshot
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </>
+                </div>
               )}
 
               {step === 'upload' && (
-                /* Screenshot Upload Step */
                 <div className="bg-card rounded-xl border border-border p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
@@ -371,22 +352,22 @@ export default function Checkout() {
                     </h2>
                   </div>
 
-                  <p className="text-muted-foreground text-sm mb-6">
+                  <p className="text-muted-foreground text-sm mb-4">
                     Upload a clear screenshot of your UPI payment showing:
                   </p>
-                  
+
                   <ul className="text-sm text-muted-foreground mb-6 space-y-2">
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-success" />
+                      <CheckCircle className="w-4 h-4 text-accent" />
                       Payment success message
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-success" />
+                      <CheckCircle className="w-4 h-4 text-accent" />
                       Amount paid (₹{total})
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-success" />
-                      Transaction ID/UTR number
+                      <CheckCircle className="w-4 h-4 text-accent" />
+                      Transaction ID / UTR number
                     </li>
                   </ul>
 
@@ -401,9 +382,9 @@ export default function Checkout() {
                   {screenshotPreview ? (
                     <div className="mb-6">
                       <div className="relative rounded-lg overflow-hidden border border-border bg-secondary/30">
-                        <img 
-                          src={screenshotPreview} 
-                          alt="Payment screenshot" 
+                        <img
+                          src={screenshotPreview}
+                          alt="Payment screenshot"
                           className="w-full max-h-72 object-contain"
                         />
                         <Button
@@ -417,24 +398,20 @@ export default function Checkout() {
                       </div>
                     </div>
                   ) : (
-                    <div 
+                    <div
                       onClick={() => fileInputRef.current?.click()}
                       className="mb-6 border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
                     >
                       <Image className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                      <p className="text-foreground font-medium mb-1">
-                        Click to upload screenshot
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        PNG, JPG up to 10MB
-                      </p>
+                      <p className="text-foreground font-medium mb-1">Click to upload screenshot</p>
+                      <p className="text-muted-foreground text-xs">PNG, JPG up to 10MB</p>
                     </div>
                   )}
 
                   <Button
                     onClick={handleVerifyScreenshot}
                     disabled={isSubmitting || !screenshotFile}
-                    className="w-full bg-gold-gradient text-white hover:opacity-90 shadow-gold font-semibold"
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                     size="lg"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -442,20 +419,18 @@ export default function Checkout() {
                   </Button>
 
                   <p className="text-xs text-center text-muted-foreground mt-4">
-                    AI will automatically verify your payment. If verification fails, admin will review manually.
+                    AI will automatically verify your payment. If verification fails, admin will
+                    review manually.
                   </p>
                 </div>
               )}
 
               {step === 'verifying' && (
-                /* Verification in Progress */
                 <div className="bg-card rounded-xl border border-border p-8 text-center">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Loader2 className="w-8 h-8 text-primary animate-spin" />
                   </div>
-                  <h2 className="font-semibold text-lg text-foreground mb-2">
-                    Verifying Payment
-                  </h2>
+                  <h2 className="font-semibold text-lg text-foreground mb-2">Verifying Payment</h2>
                   <p className="text-muted-foreground text-sm">
                     {verificationMessage || 'Please wait while we verify your payment...'}
                   </p>
