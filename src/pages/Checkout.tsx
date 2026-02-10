@@ -83,7 +83,7 @@ export default function Checkout() {
             transaction_id: transactionId,
             total_amount: total,
             discount_applied: items.reduce((sum, i) => sum + i.price, 0) - total,
-            status: 'pending_verification',
+            status: 'pending',
           })
           .select()
           .single();
