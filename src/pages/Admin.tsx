@@ -133,24 +133,28 @@ export default function Admin() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Fetch orders with user info
+    // Fetch orders
     const { data: ordersData } = await supabase
       .from('orders')
-      .select(`
-        id,
-        transaction_id,
-        total_amount,
-        status,
-        created_at,
-        screenshot_url,
-        user_id,
-        profiles!orders_user_id_fkey (
-          email,
-          full_name
-        )
-      `)
+      .select('id, transaction_id, total_amount, status, created_at, screenshot_url, user_id')
       .order('created_at', { ascending: false })
       .limit(50);
+
+    // Fetch profiles for the order user_ids
+    let enrichedOrders: Order[] = [];
+    if (ordersData && ordersData.length > 0) {
+      const userIds = [...new Set(ordersData.map(o => o.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
+      enrichedOrders = ordersData.map(o => ({
+        ...o,
+        profiles: profileMap.get(o.user_id) || null,
+      })) as Order[];
+    }
 
     // Calculate analytics
     const today = new Date();
@@ -158,7 +162,7 @@ export default function Admin() {
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const completedOrders = ordersData?.filter(o => o.status === 'completed') || [];
+    const completedOrders = enrichedOrders.filter(o => o.status === 'completed');
     const totalRevenue = completedOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
     const todayRevenue = completedOrders
       .filter(o => new Date(o.created_at) >= today)
@@ -173,13 +177,13 @@ export default function Admin() {
       .select('*', { count: 'exact', head: true });
 
     setProducts(productsData || []);
-    setOrders((ordersData as unknown as Order[]) || []);
+    setOrders(enrichedOrders);
     setAnalytics({
       totalRevenue,
       todayRevenue,
       weekRevenue,
-      totalOrders: ordersData?.length || 0,
-      pendingOrders: ordersData?.filter(o => o.status === 'verifying' || o.status === 'pending_otp').length || 0,
+      totalOrders: enrichedOrders.length,
+      pendingOrders: enrichedOrders.filter(o => o.status === 'verifying' || o.status === 'pending').length,
       totalUsers: userCount || 0,
     });
 
