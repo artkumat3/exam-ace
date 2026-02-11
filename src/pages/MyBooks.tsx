@@ -207,38 +207,49 @@ export default function MyBooks() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {books.map((book) => (
-                          <div
-                            key={book.id}
-                            className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-shadow"
-                          >
-                            <div className="w-full h-32 bg-secondary rounded-lg flex items-center justify-center mb-4">
-                              <span className="text-5xl">{getSubjectEmoji(book.products.subject)}</span>
+                        {books.map((book) => {
+                          // Check if the order for this book is completed
+                          const relatedOrder = orders.find(o => o.id === book.order_id);
+                          const isVerified = relatedOrder?.status === 'completed';
+
+                          return (
+                            <div
+                              key={book.id}
+                              className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="w-full h-32 bg-secondary rounded-lg flex items-center justify-center mb-4">
+                                <span className="text-5xl">{getSubjectEmoji(book.products.subject)}</span>
+                              </div>
+                              <h3 className="font-semibold text-foreground mb-2 line-clamp-2">
+                                {book.products.name}
+                              </h3>
+                              {book.products.description && (
+                                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                                  {book.products.description}
+                                </p>
+                              )}
+                              {isVerified && book.products.pdf_url ? (
+                                <Button
+                                  className="w-full"
+                                  onClick={() => handleDownload(book.products.pdf_url!, book.products.name)}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download PDF
+                                </Button>
+                              ) : !isVerified ? (
+                                <Button className="w-full" variant="secondary" disabled>
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Awaiting Verification
+                                </Button>
+                              ) : (
+                                <Button className="w-full" variant="secondary" disabled>
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Coming Soon
+                                </Button>
+                              )}
                             </div>
-                            <h3 className="font-semibold text-foreground mb-2 line-clamp-2">
-                              {book.products.name}
-                            </h3>
-                            {book.products.description && (
-                              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                                {book.products.description}
-                              </p>
-                            )}
-                            {book.products.pdf_url ? (
-                              <Button
-                                className="w-full"
-                                onClick={() => handleDownload(book.products.pdf_url!, book.products.name)}
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Download PDF
-                              </Button>
-                            ) : (
-                              <Button className="w-full" variant="secondary" disabled>
-                                <Clock className="w-4 h-4 mr-2" />
-                                Coming Soon
-                              </Button>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

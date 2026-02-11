@@ -57,6 +57,8 @@ interface Order {
   total_amount: number;
   status: string;
   created_at: string;
+  screenshot_url: string | null;
+  user_id: string;
   profiles: { email: string; full_name: string | null } | null;
 }
 
@@ -138,6 +140,8 @@ export default function Admin() {
         total_amount,
         status,
         created_at,
+        screenshot_url,
+        user_id,
         profiles!orders_user_id_fkey (
           email,
           full_name
@@ -304,11 +308,11 @@ export default function Admin() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-success text-success-foreground"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
+        return <Badge className="bg-primary/10 text-primary border-primary/20"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>;
       case 'verifying':
-        return <Badge className="bg-accent text-accent-foreground"><Clock className="w-3 h-3 mr-1" />Verifying</Badge>;
-      case 'pending_otp':
-        return <Badge className="bg-primary text-primary-foreground"><Clock className="w-3 h-3 mr-1" />Pending OTP</Badge>;
+        return <Badge className="bg-accent/10 text-accent border-accent/20"><Clock className="w-3 h-3 mr-1" />Verifying</Badge>;
+      case 'pending':
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case 'failed':
         return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
       default:
@@ -621,57 +625,78 @@ export default function Admin() {
                 <p className="text-muted-foreground">Orders will appear here when customers make purchases</p>
               </div>
             ) : (
-              <div className="bg-card rounded-xl border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-secondary/50">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Transaction ID</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Customer</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Amount</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Status</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Date</th>
-                        <th className="text-left px-4 py-3 text-sm font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {orders.map(order => (
-                        <tr key={order.id}>
-                          <td className="px-4 py-3 font-mono text-sm">{order.transaction_id}</td>
-                          <td className="px-4 py-3">
-                            <div className="font-medium">{order.profiles?.full_name || 'N/A'}</div>
-                            <div className="text-sm text-muted-foreground">{order.profiles?.email}</div>
-                          </td>
-                          <td className="px-4 py-3 font-semibold">₹{order.total_amount}</td>
-                          <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
-                          <td className="px-4 py-3 text-sm">{new Date(order.created_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-3">
-                            {(order.status === 'verifying' || order.status === 'pending_otp') && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-success border-success hover:bg-success/10"
-                                  onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive border-destructive hover:bg-destructive/10"
-                                  onClick={() => handleUpdateOrderStatus(order.id, 'failed')}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="space-y-4">
+                {orders.map(order => (
+                  <div key={order.id} className="bg-card rounded-xl border p-5">
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
+                      {/* Order Info */}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">{order.profiles?.full_name || 'N/A'}</p>
+                            <p className="text-sm text-muted-foreground">{order.profiles?.email}</p>
+                          </div>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="font-mono">{order.transaction_id}</span>
+                          <span>₹{order.total_amount}</span>
+                          <span>{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          {order.status !== 'completed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-primary border-primary/30 hover:bg-primary/10"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                          {order.status !== 'failed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'failed')}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          )}
+                          {(order.status === 'failed' || order.status === 'completed') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUpdateOrderStatus(order.id, 'pending')}
+                            >
+                              <Clock className="w-4 h-4 mr-1" />
+                              Reset to Pending
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Screenshot Preview */}
+                      {order.screenshot_url && (
+                        <div className="w-full md:w-48 flex-shrink-0">
+                          <p className="text-xs text-muted-foreground mb-1">Payment Screenshot</p>
+                          <a href={order.screenshot_url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={order.screenshot_url}
+                              alt="Payment screenshot"
+                              className="w-full h-40 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
+                            />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </TabsContent>
