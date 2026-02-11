@@ -89,6 +89,8 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
+  const [orderSearch, setOrderSearch] = useState('');
 
   // New product form
   const [newProduct, setNewProduct] = useState({
@@ -616,7 +618,29 @@ export default function Admin() {
 
           {/* Orders Tab */}
           <TabsContent value="orders">
-            <h2 className="text-xl font-bold mb-6">Orders ({orders.length})</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-xl font-bold">Orders ({orders.length})</h2>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <Input
+                  placeholder="Search by name or email..."
+                  value={orderSearch}
+                  onChange={e => setOrderSearch(e.target.value)}
+                  className="w-full sm:w-64"
+                />
+                <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                  <SelectTrigger className="w-40 bg-card">
+                    <SelectValue placeholder="Filter status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border border-border z-50">
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="verifying">Verifying</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {orders.length === 0 ? (
               <div className="bg-card rounded-xl border p-12 text-center">
@@ -626,7 +650,18 @@ export default function Admin() {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map(order => (
+                {orders
+                  .filter(order => orderStatusFilter === 'all' || order.status === orderStatusFilter)
+                  .filter(order => {
+                    if (!orderSearch) return true;
+                    const q = orderSearch.toLowerCase();
+                    return (
+                      order.profiles?.full_name?.toLowerCase().includes(q) ||
+                      order.profiles?.email?.toLowerCase().includes(q) ||
+                      order.transaction_id.toLowerCase().includes(q)
+                    );
+                  })
+                  .map(order => (
                   <div key={order.id} className="bg-card rounded-xl border p-5">
                     <div className="flex flex-col md:flex-row md:items-start gap-4">
                       {/* Order Info */}
